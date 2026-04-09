@@ -35,6 +35,9 @@ CODES_POSTAUX = tools.get_codes_postaux()
 # autres variables
 PDF_FOLDER_PATH = ROOT_DIR / "offres_pdf"
 
+# variables de session
+
+
 # --- Adaptateur SQLite pour les dates (Python 3.12+) ---
 def adapt_date(val):
     return val.isoformat()
@@ -134,7 +137,7 @@ def display_pdf(file_path):
 # --- INTERFACE STREAMLIT ---
 
 
-st.set_page_config(page_title="Job Tracker", page_icon="🎯", layout="wide")
+st.set_page_config(page_title="Gestionnaire de Candidatures", page_icon="🎯", layout="wide")
 st.title("🎯 Gestionnaire de Candidatures")
 
 # On vérifie si un message doit être affiché (en mode toast)
@@ -435,34 +438,44 @@ elif menu_selected == "Modifier/Supprimer":
                             st.rerun()
 
                     with st.expander("**Mise à jour en profondeur**"):
+                        
                         @st.dialog("Confirmation de mise à jour")
-                        def confirm_update_dialog(query, params):
+                        def confirm_update_dialog(query="", query_params=[], update_pdf=False, pdf_params={}):
                             st.warning(f"Valider les changement pour **{d['societe_nom']} - {d['titre_poste']}** ?")
                             c1, c2 = st.columns(2)
                             if c1.button("Oui, mettre à jour", type="primary", width="stretch"):
-                                run_query(query, params)
+                                
+                                if update_pdf:
+                                    with st.spinner("Capture du PDF de l'offre..."):
+                                        # si un fichier existe déjà, on le supprime
+                                        if pdf_params['old_pdf_path'] and os.path.exists(pdf_params['old_pdf_path']):
+                                            os.remove(pdf_params['old_pdf_path'])
+                                        safe_name = f"{pdf_params['date_candidature']}_{pdf_params['nom']}_{str(uuid.uuid4())[:8]}".replace(" ", "_")
+                                        pdf_file = save_pdf_from_url(lien, safe_name)
+                                        query_params.insert(-1, pdf_file)
+                                
+                                run_query(query, query_params)
                                 st.session_state.message = "Mise à jour effectuée !"
                                 st.session_state.message_icon = "✅"
                                 st.rerun()
                             if c2.button("Annuler", width="stretch"):
                                 st.rerun()
+                        
                         with st.form("update_date_candidature"):
                             col1, col2 = st.columns(2)
                             with col1:
-
                                 try:
                                     d_can_val = d['date_candidature']
                                 except:
                                     d_can_val = date.today()
                                 date_candidature = st.date_input("Date de candidature", d_can_val, format="DD/MM/YYYY")
 
-
                                 if st.form_submit_button("💾 Enregistrer la date de candidature", type="primary"):
                                     confirm_update_dialog("""
                                         UPDATE candidatures SET
                                             date_candidature=?
                                         WHERE id=?
-                                        """, (date_candidature, id_sel))
+                                        """, [date_candidature, id_sel])
 
                         with st.form("update_other_candidature"):
                             col1, col2 = st.columns(2)
@@ -482,7 +495,6 @@ elif menu_selected == "Modifier/Supprimer":
                                 type_c = st.selectbox("Type de candidature", type_c_options, index=type_c_index)
 
                                 canal = st.text_input("Canal (ex: HelloWork)", value=d['canal'] or "")
-                                #lien = st.text_input("Lien de l'offre")
 
 
                             if st.form_submit_button("💾 Enregistrer les informations", type="primary"):
@@ -490,12 +502,25 @@ elif menu_selected == "Modifier/Supprimer":
                                     UPDATE candidatures SET
                                     societe_nom=?, type_candidature=?, titre_poste=?, canal=?, type_contrat=?
                                     WHERE id=?
-                                    """, (nom, type_c, titre, canal, contrat, id_sel))
+                                    """, [nom, type_c, titre, canal, contrat, id_sel])
+                        
+                        if d["type_candidature"] == "Réponse à une offre":
+                            with st.form("update_lien"):
+                                lien = st.text_input("Lien de l'offre", value=d['lien_offre'] or "")
+                                if st.form_submit_button("💾 Enregistrer la capture", type="primary"):
+                                    if lien :
+                                        
+                                        confirm_update_dialog("""
+                                            UPDATE candidatures SET
+                                            lien_offre=?, pdf_path=?
+                                            WHERE id=?
+                                            """, [lien, id_sel], update_pdf=True, pdf_params={'old_pdf_path':d['pdf_path'],'date_candidature':date_candidature, 'nom':nom})
 
 
                     st.divider()
                     
                     st.subheader("🗑️ Suppression du dossier")
+                    
                     with st.container(border=True):
                         st.write("⚠️ Cette action est irréversible. Le fichier associé sera également effacé du disque, le cas échéant.")
                         
