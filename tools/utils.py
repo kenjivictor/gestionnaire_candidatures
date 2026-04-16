@@ -1,8 +1,25 @@
 import pandas as pd
 import requests
+import os
+import subprocess
+import sys
+import streamlit as st
+import sqlite3
+from datetime import date, datetime, timedelta
+from pathlib import Path
+from dotenv import load_dotenv
+import base64
 
 # Paramètres de recherche
 BASE_URL = "https://recherche-entreprises.api.gouv.fr/search"
+# chemin absolu du dossier racine
+ROOT_DIR = Path(__file__).resolve().parent.parent
+
+# Charger les variables d'environnement du fichier .env
+env_path = ROOT_DIR / ".env"
+load_dotenv(dotenv_path=env_path, override=True)
+DB_FILE_NAME = os.getenv("DB_FILE_NAME", "default.db")
+
 
 
 def get_codes_naf():
@@ -152,19 +169,19 @@ def fetch_entreprises(data: dict, page:int =1)-> dict:
 
 
 
-#        **Coordonnées GPS :** {dico['Coordonnées GPS']}  
 
-def get_entreprise_text(dico):
-    return f"""
-        ### _{dico['Nom']}_   
-        **Adresse :** {dico['Adresse']}  
-        **SIREN :** {dico['SIREN']} / **NAF :** {dico['NAF']}  
-        **Tranche Effectif :** {dico['Tranche Effectif']} / **Catégorie d'entreprise :** {dico['Catégorie d\'entreprise']}  
-        **Nature juridique:** {dico['Nature juridique']}  
-        **Date de création :** {dico['Date de création']}  
-        **Date de fermeture :** {dico['Date de fermeture']}  
-        **Convention(s) collective(s) :** {dico['Convention(s) collective(s)']}  
-    """
+
+# def get_entreprise_text(dico):
+#     return f"""
+#         ### _{dico['Nom']}_   
+#         **Adresse :** {dico['Adresse']}  
+#         **SIREN :** {dico['SIREN']} / **NAF :** {dico['NAF']}  
+#         **Tranche Effectif :** {dico['Tranche Effectif']} / **Catégorie d'entreprise :** {dico['Catégorie d\'entreprise']}  
+#         **Nature juridique:** {dico['Nature juridique']}  
+#         **Date de création :** {dico['Date de création']}  
+#         **Date de fermeture :** {dico['Date de fermeture']}  
+#         **Convention(s) collective(s) :** {dico['Convention(s) collective(s)']}  
+#     """
 
 def get_entreprise_details(dico):
     
@@ -191,4 +208,93 @@ def get_entreprise_details(dico):
         retour += f"**Convention(s) collective(s) :** {" - ".join(liens_conv)}  "
         
     return retour
+
+
+# fonction qui sauvegarde une page web
+def save_pdf_from_url(url, filename, pdf_folder_path):
+    """Lance shot.py en tant que processus indépendant pour éviter les conflits asyncio."""
+    if not url: return None
+    
+    
+    output_path = os.path.abspath(os.path.join(pdf_folder_path, f"{filename}.pdf"))
+
+    try:
+        # On appelle shot.py avec l'URL et le chemin de sortie
+        # On utilise sys.executable pour être sûr d'utiliser le bon environnement Python
+        result = subprocess.run(
+            [sys.executable, "tools/shot.py", url, output_path],
+            capture_output=True,
+            text=True
+        )
+
+        if "Success" in result.stdout:
+            return output_path
+        else:
+            st.warning(f"Erreur lors de la capture : {result.stdout} {result.stderr}")
+            return None
+    except Exception as e:
+        st.warning(f"Impossible de générer le PDF (mais la candidature est enregistrée) : {e}")
+        return None
+
+# fonction qui exécute une requete SQL et si c'est un SELECT, retourne le résultat sous forme de liste de dictionnaires
+def run_query(query, params=(), fetch=False):
+    # chemin absolu du fichier de base de données
+    db_path = ROOT_DIR / "db" / DB_FILE_NAME
+    try:
+        
+        # Ajout de detect_types pour que SQLite reconnaisse nos dates
+        with sqlite3.connect(db_path, detect_types=sqlite3.PARSE_DECLTYPES) as conn:
+            conn.row_factory = sqlite3.Row # Cette ligne permet d'accéder aux colonnes par leur nom (ex: row['societe_nom'])
+            cursor = conn.cursor()
+
+            # Conversion explicite des dates en string pour éviter le warning si l'adaptateur échoue
+            clean_params = tuple(p.isoformat() if isinstance(p, date) else p for p in params)
+
+            cursor.execute(query, clean_params)
+            conn.commit()
+            if fetch:
+                # On convertit les sqlite3.Row en dict standard
+                return [dict(row) for row in cursor.fetchall()]
+    except Exception as e:
+        print(f"Erreur SQLite ({db_path}): {e}")
+        return -1
+    return None
+
+# fonction qui affiche un fichier PDF dans une fenetre modale
+@st.dialog("Visualisation du document", width="large")
+def display_pdf(file_path):
+    
+    # teste l'existance du fichier
+    if not os.path.exists(file_path):
+        st.error("Le fichier est introuvable sur le disque.")
+        return
+    
+    # Lecture du fichier et encodage en base64
+    with open(file_path, "rb") as f:
+        base64_pdf = base64.b64encode(f.read()).decode('utf-8')
+    
+    # Création de l'objet HTML (Iframe)
+    pdf_display = f'''
+            <div style="height: 80vh; width: 100%; overflow: hidden;">
+                <iframe 
+                    src="data:application/pdf;base64,{base64_pdf}#view=FitH" 
+                    width="100%" 
+                    height="100%" 
+                    type="application/pdf"
+                    style="border:none;"
+                ></iframe>
+            </div>
+                '''
+    
+    # Affichage dans Streamlit
+    st.markdown(pdf_display, unsafe_allow_html=True)
+
+# fonction qui donne une couleur en fonction du statut de la candidature
+def color_result(val):
+    if val == 'En attente': return "ℹ️", "blue"
+    if val == 'Entretien': return "☑️", "violet"
+    if val == 'Offre': return "✅", "green"
+    if val == 'Refus': return "❌", "red"
+    return "ℹ️", "blue"
+
 
