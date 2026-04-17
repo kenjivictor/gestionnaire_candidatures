@@ -12,7 +12,9 @@ Ce projet m'a permis de mettre en pratique des compétences clés :
 - **Automatisation :** Création d'alertes intelligentes pour les relances.
 - **Dataviz :** Mise en place d'un tableau de bord décisionnel pour piloter ma recherche à l'instant T.
 
-
+# 📷 Aperçu de l'application
+*Les données présentes dans l'aperçu sont des données de test*
+![Aperçu de l'application](animation_candidatures.gif)
 
 # ⚙️ Fonctionnalités principales
 
