@@ -65,8 +65,14 @@ if st.session_state.search_results:
     res = st.session_state.search_results
     results_list = res['results']
     
+    
+    # le nombre total de résultats est limité à 10 000 résultats
+    # le calcul "page * per_page" doit être < 10 000 sinon l'API renvoi une erreur => 416 pages max (avec 24 éléments par page)
+    total_pages = 416 if res['total_pages'] > 416 else res['total_pages']
+    
+    
     st.divider()
-    st.info(f"📍 {res['total_results']} entreprises trouvées (Page {st.session_state.current_page} sur {res['total_pages']})")
+    st.info(f"📍 {res['total_results']} entreprises trouvées (Page {st.session_state.current_page} sur {total_pages})")
 
     # --- Affichage des fiches entreprises
     nb_cols = 3
@@ -91,4 +97,4 @@ if st.session_state.search_results:
 
     # --- PAGINATION ---
     if res["total_pages"] > 1:
-        st_widgets.afficher_pagination(res["total_pages"])
+        st_widgets.afficher_pagination(total_pages)

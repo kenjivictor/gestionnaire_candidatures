@@ -11,13 +11,13 @@ def afficher_pagination(total_pages):
     
     # ÉTAPE 1 : Créer 3 colonnes pour le centrage global
     # [1, 3, 1] signifie que la colonne centrale est 3x plus large que les bords
-    _, center_col, _ = st.columns([1, 4, 1])
+    _, center_col, _ = st.columns([1, 9, 1])
     
     with center_col:
         # ÉTAPE 2 : Dans la colonne centrale, on crée nos sous-colonnes pour les boutons
-        # On calcule le nombre de boutons (Premier, Précédent, 7 numéros, Suivant, Dernier)
-        # On peut en avoir jusqu'à 11 au total.
-        cols = st.columns([1] * 11)
+        # On calcule le nombre de boutons (Premier, Précédent, 9 numéros, Suivant, Dernier)
+        # On peut en avoir jusqu'à 13 au total.
+        cols = st.columns([1] * 13)
 
         col_idx = 0
 
@@ -32,16 +32,16 @@ def afficher_pagination(total_pages):
                 changer_page(curr_p - 1)
         col_idx += 1
 
-        # --- CALCUL DES PAGES ENVIRONNANTES (-3, +3) ---
-        # On veut afficher au max 7 numéros (3 avant, la courante, 3 après)
-        start_p = max(1, curr_p - 3)
-        end_p = min(total_pages, curr_p + 3)
+        # --- CALCUL DES PAGES ENVIRONNANTES (-4, +4) ---
+        # On veut afficher au max 9 numéros (4 avant, la courante, 4 après)
+        start_p = max(1, curr_p - 4)
+        end_p = min(total_pages, curr_p + 4)
 
         # Ajustement si on est au début ou à la fin pour toujours avoir 7 boutons si possible
-        if curr_p <= 3:
-            end_p = min(total_pages, 7)
-        if curr_p > total_pages - 3:
-            start_p = max(1, total_pages - 6)
+        if curr_p <= 4:
+            end_p = min(total_pages, 9)
+        if curr_p > total_pages - 4:
+            start_p = max(1, total_pages - 8)
 
         # --- BOUTONS NUMÉRIQUES ---
         for p in range(start_p, end_p + 1):
@@ -52,7 +52,7 @@ def afficher_pagination(total_pages):
             col_idx += 1
 
         # On se cale sur les deux dernières colonnes pour Suivant/Dernier
-        col_idx = 9
+        col_idx = 11
 
         # --- BOUTON SUIVANT & DERNIER ---
         with cols[col_idx]:
