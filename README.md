@@ -3,7 +3,7 @@
 
 Fraîchement certifiée **Data Analyst** 🎓, j'ai rapidement été confrontée à un défi de taille : gérer efficacement un volume croissant de candidatures. Entre les relances à effectuer, les entretiens à préparer et le suivi des réponses, j'ai ressenti le besoin d'un outil centralisé et intelligent.
 
-   *L'objectif : transformer un processus administratif fastidieux en un flux de données exploitable.*🚀
+   *🚀 L'objectif : transformer un processus administratif fastidieux en un flux de données exploitable.*
 
 Pour répondre à ce besoin, j'ai conçu et développé une application de suivi en temps réel sous **Python** et **Streamlit**. 
 
