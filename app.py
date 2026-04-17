@@ -34,6 +34,7 @@ pages = {
         st.Page("app_pages/list.py", title="Liste", icon="📋"),
         st.Page("app_pages/add.py", title="Ajouter", icon="➕"),
         st.Page("app_pages/update_delete.py", title="Modifier/Supprimer", icon="⚙️"),
+        st.Page("app_pages/archive.py", title="Archives", icon="📦"),
         st.Page("app_pages/search_enterprises.py", title="Recherche d'entreprise", icon="🔎"),
     ],
 }

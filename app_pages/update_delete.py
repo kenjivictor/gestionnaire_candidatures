@@ -5,16 +5,23 @@ from datetime import date
 import os
 from pathlib import Path
 import uuid
+from dotenv import load_dotenv
+from datetime import date, datetime, timedelta
 
 # chemin absolu du dossier racine
 ROOT_DIR = Path(__file__).resolve().parent.parent
 PDF_FOLDER_PATH = ROOT_DIR / "offres_pdf"
 
+# Charger les variables d'environnement du fichier .env
+env_path = ROOT_DIR / ".env"
+load_dotenv(dotenv_path=env_path, override=True)
+DELAI_RELANCE = os.getenv("DELAI_RELANCE", 15)
+DELAI_ARCHIVE = os.getenv("DELAI_ARCHIVE", 35)
 
 st.subheader("🛠️ Suivi, mise à jour et suppression de dossier")
 
 # 1. On récupère la liste pour la sélection
-items = tools.run_query("SELECT id, societe_nom, titre_poste, date_candidature FROM candidatures ORDER BY date_candidature DESC", fetch=True)
+items = tools.run_query("SELECT id, societe_nom, titre_poste, date_candidature, est_archive FROM candidatures ORDER BY date_candidature DESC", fetch=True)
 
 if isinstance(items, list):
     if len(items) >0:
@@ -24,7 +31,7 @@ if isinstance(items, list):
         choice_item = st.selectbox(
             "Sélectionner une candidature",
             options,
-            format_func=lambda x: f"{x['date_candidature']} - {x['societe_nom']} - {x['titre_poste']}" if x else "Choisir dans la liste...",
+            format_func=lambda x: f"{x['date_candidature']} - {x['societe_nom']} - {x['titre_poste']} {' --- Archivé' if x['est_archive'] else ''}" if x else "Choisir dans la liste...",
             key="select_suivi" # Ajout d'une clé stable
         )
 
@@ -107,6 +114,7 @@ if isinstance(items, list):
                                     # si un fichier existe déjà, on le supprime
                                     if pdf_params['old_pdf_path'] and os.path.exists(pdf_params['old_pdf_path']):
                                         os.remove(pdf_params['old_pdf_path'])
+                                        print(f"✅ Fichier supprimé : {pdf_params['old_pdf_path']}")
                                     safe_name = f"{pdf_params['date_candidature']}_{pdf_params['nom']}_{str(uuid.uuid4())[:8]}".replace(" ", "_")
                                     pdf_file = tools.save_pdf_from_url(lien, safe_name, PDF_FOLDER_PATH)
                                     query_params.insert(-1, pdf_file)
@@ -173,6 +181,19 @@ if isinstance(items, list):
                                         WHERE id=?
                                         """, [lien, id_sel], update_pdf=True, pdf_params={'old_pdf_path':d['pdf_path'],'date_candidature':date_candidature, 'nom':nom})
 
+                st.divider()
+                
+                st.subheader("📦 Archivage du dossier")
+                
+                if d['est_archive'] :
+                    if st.button("→ Désarchiver", key=f"btn_desarchive_{d['id']}"):
+                        tools.confirm_archivage_dialog(int(d['id']), d['societe_nom'], archive=False)
+                else:
+                    if d['resultat'] == "En attente":
+                        nbj = (date.today() - d['date_candidature']).days
+                        st.write(f"En attente depuis {nbj} jours")
+                        if st.button("→ Archiver", key=f"btn_archive_{d['id']}"):
+                            tools.confirm_archivage_dialog(int(d['id']), d['societe_nom'])
 
                 st.divider()
                 

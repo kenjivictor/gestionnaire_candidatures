@@ -38,7 +38,8 @@ def init_db():
                 date_reponse DATE,
                 resultat TEXT,
                 suite_a_donner TEXT,
-                commentaires TEXT
+                commentaires TEXT,
+                est_archive INTEGER DEFAULT (0)
             )
         ''')
         conn.commit()

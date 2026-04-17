@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 import base64
 
 # Paramètres de recherche
-BASE_URL = "https://recherche-entreprises.api.gouv.fr/search"
+BASE_API_URL = "https://recherche-entreprises.api.gouv.fr/search"
 # chemin absolu du dossier racine
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
@@ -89,8 +89,8 @@ def get_formes_juridique():
 
 
 
-TRANCHES_EFFECTIF = get_tranches_effectif()
-FORMES_JURIDIQUES = get_formes_juridique()
+#TRANCHES_EFFECTIF = get_tranches_effectif()
+#FORMES_JURIDIQUES = get_formes_juridique()
 
 
 
@@ -114,7 +114,7 @@ def format_field(listes, dico):
             items += eval(str(dico.get(item)))
     return ",".join(items)
 
-
+# fonction qui recherche les entreprises dans l'API en fonction des paramètres fournis
 def fetch_entreprises(data: dict, page:int =1)-> dict: 
     retour = {
         'results': [],
@@ -134,7 +134,7 @@ def fetch_entreprises(data: dict, page:int =1)-> dict:
         headers = {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',
                 }
-        response = requests.get(BASE_URL, params=params, timeout=10, headers=headers)
+        response = requests.get(BASE_API_URL, params=params, timeout=10, headers=headers)
         response.raise_for_status()
         data = response.json()
 
@@ -149,9 +149,9 @@ def fetch_entreprises(data: dict, page:int =1)-> dict:
                 "Nom": item.get("nom_complet"),
                 "Adresse": item.get("siege").get("adresse"),
                 "NAF": item.get("activite_principale"),
-                "Tranche Effectif": find_element_key_dico(item.get("tranche_effectif_salarie"), TRANCHES_EFFECTIF),
+                "Tranche Effectif": find_element_key_dico(item.get("tranche_effectif_salarie"), get_tranches_effectif()),
                 "Coordonnées GPS": item.get("siege").get("coordonnees"),
-                "Nature juridique": FORMES_JURIDIQUES.get(int(item.get("nature_juridique")[0])),
+                "Nature juridique": get_formes_juridique().get(int(item.get("nature_juridique")[0])),
                 "Date de création" : item.get("siege").get("date_creation"),
                 "Date de fermeture" : item.get("siege").get("date_fermeture"),
                 "Catégorie d'entreprise" : item.get("categorie_entreprise"),
@@ -170,19 +170,7 @@ def fetch_entreprises(data: dict, page:int =1)-> dict:
 
 
 
-
-# def get_entreprise_text(dico):
-#     return f"""
-#         ### _{dico['Nom']}_   
-#         **Adresse :** {dico['Adresse']}  
-#         **SIREN :** {dico['SIREN']} / **NAF :** {dico['NAF']}  
-#         **Tranche Effectif :** {dico['Tranche Effectif']} / **Catégorie d'entreprise :** {dico['Catégorie d\'entreprise']}  
-#         **Nature juridique:** {dico['Nature juridique']}  
-#         **Date de création :** {dico['Date de création']}  
-#         **Date de fermeture :** {dico['Date de fermeture']}  
-#         **Convention(s) collective(s) :** {dico['Convention(s) collective(s)']}  
-#     """
-
+# fonction qui affiche les détails d'une entreprise (vue concernée : recherche d'netreprises)
 def get_entreprise_details(dico):
     
     
@@ -209,6 +197,81 @@ def get_entreprise_details(dico):
         
     return retour
 
+# fonction qui réalise toutes les transformation nécessaires sur le résultat obtenu de la requete SQL sur les candidatures
+# et retourne le résultat sous forme de dataframe pandas
+def transform_data_candidature_to_dataframe(data, delai_relance):
+    # Transformation des données en DataFrame pour manipulation facile
+    df = pd.DataFrame(data)
+
+    # -- calcul de nouvelles colonnes
+
+    # Conversion de la colonne date (qui est en texte/ISO dans SQLite) en objet datetime
+    # errors='coerce' => Si la cellule est vide dans SQLite, Pandas créera un NaT (Not a Time)
+    df['date_candidature'] = pd.to_datetime(df['date_candidature'], format="Y-m-d")
+    df['date_reponse'] = pd.to_datetime(df['date_reponse'], format="Y-m-d", errors='coerce')
+
+    # Calcul du délai de relance (aujourd'hui - nb jours)
+    seuil_relance = datetime.now() - timedelta(days=delai_relance)
+    
+    # date de référence à prendre en compte selon s'il y a déjà eu un retour ou non
+    df['date_ref'] = df['date_reponse'].fillna(df['date_candidature'])
+    
+    # calcul des candidatures à relancer
+    df['a_relancer'] = ((df['date_ref'] < seuil_relance) & (df['resultat'] == 'En attente') & (df['est_archive'] == 0)).astype(int)
+
+    # Calcule du nombre de jours d'attente (si 'En attente' => nbjours, sinon 0)
+    # Calcul de la différence pour toutes les lignes, puis création de la nouvelle colonne
+    diff_jours = (datetime.now() - df['date_candidature']).dt.days
+    df['jours_attente'] = diff_jours.where((df['resultat'] == 'En attente') & (df['est_archive'] == 0), 0)
+    
+    return df
+
+
+#fonction qui affiche une candidature sous forme de carte (les vues concernées : liste et archives)
+def display_candidature(candidature, delai_archive):
+    # On affiche la fiche dans une "Card" (st.container avec bordure)
+    with st.container(border=True):
+        text_icon, text_color = color_result(candidature[['resultat','a_relancer','est_archive']])
+        
+        if candidature['a_relancer'] :
+            text_jours = f":{text_color}[:{text_color}-background[**" + str(candidature['jours_attente']) + " jour(s)**]]"
+        elif candidature['est_archive'] :
+            text_jours = f":{text_color}[:{text_color}-background[**Archivé**]]"
+        else:
+            text_jours = ""
+        
+        st.markdown(f":{text_color}[:{text_color}-background[**{text_icon} {candidature['societe_nom']} - {candidature['titre_poste']} - {candidature['type_contrat']}**]]")
+        st.caption(f"""
+                Candidature envoyée le **{datetime.strftime(candidature['date_candidature'], '%d/%m/%Y')}** en **'{candidature['type_candidature']}'**  
+                Canal d'envoi : {candidature['canal']}
+                """)
+        st.write(f"""**Etat :** {candidature['resultat']} depuis le {datetime.strftime(candidature['date_ref'], '%d/%m/%Y')} {text_jours}""")
+        if candidature['est_archive'] :
+            if st.button("→ Désarchiver", key=f"btn_desarchive_{candidature['id']}"):
+                confirm_archivage_dialog(int(candidature['id']), candidature['societe_nom'], archive=False)
+        else:
+            if int(candidature['jours_attente']) >= delai_archive or candidature['resultat'] == "Refus":
+                if st.button("→ Archiver", key=f"btn_archive_{candidature['id']}"):
+                    confirm_archivage_dialog(int(candidature['id']), candidature['societe_nom'])
+        st.write(f"**Commentaires :** {candidature['commentaires']}")
+        
+        # Bouton pour voir le détail complet
+        with st.expander("Détails"):
+            cols_detail = st.columns(2)
+            with cols_detail[0]:
+                st.markdown(f"""
+                        **Adresse :** {candidature['societe_adresse']}  
+                        **Mail :** {candidature['societe_mail']}  
+                        **Tel :** {candidature['societe_tel']}  
+                        **Personne contact :** {candidature['societe_contact']}  
+                        """)
+            with cols_detail[1]:
+                st.markdown(f"**Lien original :** [Suivre le lien]({candidature['lien_offre']})")
+                pdf_path = candidature['pdf_path']
+                    # On vérifie que le fichier existe avant d'essayer de l'afficher
+                if pdf_path and os.path.exists(pdf_path):
+                    if st.button("Voir le PDF", key=f"btn_pdf_{candidature['id']}"):
+                        display_pdf(pdf_path)
 
 # fonction qui sauvegarde une page web
 def save_pdf_from_url(url, filename, pdf_folder_path):
@@ -238,17 +301,45 @@ def save_pdf_from_url(url, filename, pdf_folder_path):
 
 # fonction qui exécute une requete SQL et si c'est un SELECT, retourne le résultat sous forme de liste de dictionnaires
 def run_query(query, params=(), fetch=False):
+    import numpy as np
     # chemin absolu du fichier de base de données
     db_path = ROOT_DIR / "db" / DB_FILE_NAME
-    try:
+    
+    # fonction interne qui convertit les types Pandas/NumPy/Python en types compatibles SQLite
+    def normalize_param(p):
         
+        # NumPy → Python natif
+        if isinstance(p, (np.integer)):
+            return int(p)
+        if isinstance(p, (np.floating, np.float64)):
+            return float(p)
+        if isinstance(p, (np.bool_)):
+            return bool(p)
+
+        # Dates → ISO string
+        if isinstance(p, (date, datetime)):
+            return p.isoformat()
+
+        # None, str, int, float → OK
+        return p
+    
+    # fonction interne qui affiche la requete SQL
+    def trace_callback(stmt):
+        print("SQL exécuté :", stmt)
+    
+    try:
         # Ajout de detect_types pour que SQLite reconnaisse nos dates
         with sqlite3.connect(db_path, detect_types=sqlite3.PARSE_DECLTYPES) as conn:
+            # conn.set_trace_callback(trace_callback) # pour afficher la requete exécutée
             conn.row_factory = sqlite3.Row # Cette ligne permet d'accéder aux colonnes par leur nom (ex: row['societe_nom'])
             cursor = conn.cursor()
 
+            # Toujours convertir params en tuple
+            if not isinstance(params, (tuple, list)):
+                params = (params,)
+
             # Conversion explicite des dates en string pour éviter le warning si l'adaptateur échoue
-            clean_params = tuple(p.isoformat() if isinstance(p, date) else p for p in params)
+            clean_params = tuple(normalize_param(p) for p in params)
 
             cursor.execute(query, clean_params)
             conn.commit()
@@ -289,12 +380,46 @@ def display_pdf(file_path):
     # Affichage dans Streamlit
     st.markdown(pdf_display, unsafe_allow_html=True)
 
+
+#fonction qui affiche une modale de confirmation
+@st.dialog("Confirmation archivage")
+def confirm_archivage_dialog(id, societe, archive=True):
+    
+    if archive == True:
+        txt_title = "Archiver"
+        txt_button = "archiver"
+        est_archive = 1
+        txt_message = "archivée"
+    else:
+        txt_title = "Désarchiver"
+        txt_button = "désarchiver"
+        est_archive = 0
+        txt_message = "désarchivée"
+    
+    st.warning(f"{txt_title} la candidature chez **{societe}** ?")
+    c1, c2 = st.columns(2)
+    if c1.button(f"Oui, {txt_button}", type="primary", width="stretch"):
+        try:
+            # suppression dans la base de données
+            run_query(f"UPDATE candidatures SET est_archive = {est_archive} WHERE id=?", (id,))
+            st.session_state.message = f"Candidature chez **{societe}** {txt_message} !"
+            st.session_state.message_icon = "✅"
+        except Exception as e:
+            st.session_state.message = f"Erreur : candidature chez **{societe}** non {txt_message} !"
+            st.session_state.message_icon = "❌"
+            print(f"Erreur lors de l'archivage : {e}")
+        st.rerun()
+    if c2.button("Annuler", width="stretch"):
+        st.rerun()
+
 # fonction qui donne une couleur en fonction du statut de la candidature
 def color_result(val):
-    if val == 'En attente': return "ℹ️", "blue"
-    if val == 'Entretien': return "☑️", "violet"
-    if val == 'Offre': return "✅", "green"
-    if val == 'Refus': return "❌", "red"
+    if val['est_archive'] == 1: return "📦", "grey"
+    if val['a_relancer'] == 1: return "⚠️", "yellow"
+    if val['resultat'] == 'Entretien': return "☑️", "violet"
+    if val['resultat'] == 'Offre': return "✅", "green"
+    if val['resultat'] == 'Refus': return "❌", "red"
+    if val['resultat'] == 'En attente': return "ℹ️", "blue"
     return "ℹ️", "blue"
 
 
