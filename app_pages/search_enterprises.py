@@ -69,13 +69,13 @@ if st.session_state.search_results:
     st.info(f"📍 {res['total_results']} entreprises trouvées (Page {st.session_state.current_page} sur {res['total_pages']})")
 
     # --- Affichage des fiches entreprises
-            
-    # On parcourt la liste par groupes de 4
-    for i in range(0, len(results_list), 4):
-        cols = st.columns(4) # On crée 4 colonnes pour cette ligne
+    nb_cols = 3
+    # On parcourt la liste par groupes de nb_cols
+    for i in range(0, len(results_list), nb_cols):
+        cols = st.columns(nb_cols) # On crée les colonnes pour cette ligne
         
         # On remplit chaque colonne du groupe actuel
-        for j in range(4):
+        for j in range(nb_cols):
             if i + j < len(results_list):
                 with cols[j]:
                     # On affiche la fiche dans une "Card" (st.container avec bordure)
