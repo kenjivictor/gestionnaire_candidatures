@@ -1,0 +1,46 @@
+[server]
+enableStaticServing = true
+
+[[theme.fontFaces]]
+family = "DMSans"
+url = "app/static/DMSans-Regular.ttf"
+style = "normal"
+weight = 400
+
+[[theme.fontFaces]]
+family = "DMSans"
+url = "app/static/DMSans-Medium.ttf"
+style = "normal"
+weight = 500
+
+[[theme.fontFaces]]
+family = "DMSans"
+url = "app/static/DMSans-SemiBold.ttf"
+style = "normal"
+weight = 600
+
+[[theme.fontFaces]]
+family = "DMSans"
+url = "app/static/DMSans-Bold.ttf"
+style = "normal"
+weight = 700
+
+[[theme.fontFaces]]
+family = "FiraCode"
+url = "app/static/FiraCode-Regular.ttf"
+style = "normal"
+weight = 400
+
+[[theme.fontFaces]]
+family = "FiraCode"
+url = "app/static/FiraCode-Medium.ttf"
+style = "normal"
+weight = 500
+
+
+[theme]
+primaryColor = "#7C6EE4"                # Violet pastel professionnel
+backgroundColor = "#FFFFFF"             # Fond clair
+secondaryBackgroundColor = "#F4F1FB"    # Violet très léger pour sidebar / containers
+textColor = "#1A1A1A"                   # Texte lisible et sobre
+font = "DMSans"                     # Moderne et neutre
