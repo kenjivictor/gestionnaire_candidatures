@@ -30,11 +30,16 @@ with st.form("form_add"):
     submit = st.form_submit_button("💾 Enregistrer", type="primary")
 
 if submit:
+    pdf_message = ""
     pdf_file = None
     if lien:
         with st.spinner("Capture du PDF de l'offre..."):
             safe_name = f"{d_cand}_{nom}_{str(uuid.uuid4())[:8]}".replace(" ", "_")
             pdf_file = tools.save_pdf_from_url(lien, safe_name, PDF_FOLDER_PATH)
+            if pdf_file == None:
+                pdf_message = " mais PDF non capturé"
+            else:
+                pdf_message = " et PDF capturé !"
 
     query = '''
             INSERT INTO candidatures (date_candidature, societe_nom, societe_adresse, type_candidature,
@@ -44,9 +49,9 @@ if submit:
     result = tools.run_query(query, (d_cand, nom, adresse, type_c, titre, canal, contrat, lien, pdf_file, mail, comm, 'En attente',contact))
     
     if result != -1:
-        st.session_state.message = "Candidature ajoutée !"
+        st.session_state.message = "Candidature ajoutée !" + pdf_message
         st.session_state.message_icon = "✅"
         st.rerun()
     else:
-        st.session_state.message = "Une erreur s'est produite"
+        st.session_state.message = "Une erreur s'est produite" + pdf_message
         st.session_state.message_icon = "❌"

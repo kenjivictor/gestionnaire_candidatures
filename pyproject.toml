@@ -5,7 +5,9 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "cloudscraper>=1.2.71",
     "pandas>=2.3.3",
+    "pdfkit>=1.0.0",
     "playwright>=1.58.0",
     "python-dotenv>=1.2.2",
     "streamlit-option-menu>=0.4.0",

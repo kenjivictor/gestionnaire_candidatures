@@ -105,6 +105,7 @@ if isinstance(items, list):
                     
                     @st.dialog("Confirmation de mise à jour")
                     def confirm_update_dialog(query="", query_params=[], update_pdf=False, pdf_params={}):
+                        pdf_message = ""
                         st.warning(f"Valider les changement pour **{d['societe_nom']} - {d['titre_poste']}** ?")
                         c1, c2 = st.columns(2)
                         if c1.button("Oui, mettre à jour", type="primary", width="stretch"):
@@ -117,10 +118,14 @@ if isinstance(items, list):
                                         print(f"✅ Fichier supprimé : {pdf_params['old_pdf_path']}")
                                     safe_name = f"{pdf_params['date_candidature']}_{pdf_params['nom']}_{str(uuid.uuid4())[:8]}".replace(" ", "_")
                                     pdf_file = tools.save_pdf_from_url(lien, safe_name, PDF_FOLDER_PATH)
+                                    if pdf_file == None:
+                                        pdf_message = " mais PDF non capturé"
+                                    else:
+                                        pdf_message = " et PDF capturé !"
                                     query_params.insert(-1, pdf_file)
                             
                             tools.run_query(query, query_params)
-                            st.session_state.message = "Mise à jour effectuée !"
+                            st.session_state.message = "Mise à jour effectuée !" + pdf_message
                             st.session_state.message_icon = "✅"
                             st.rerun()
                         if c2.button("Annuler", width="stretch"):

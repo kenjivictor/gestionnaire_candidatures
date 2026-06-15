@@ -289,14 +289,24 @@ def save_pdf_from_url(url, filename, pdf_folder_path):
             capture_output=True,
             text=True
         )
-
-        if "Success" in result.stdout:
+        
+        # --- afficher les logs du script ---
+        print("=== LOGS shot.py ===")
+        print(result.stdout)
+        print(result.stderr)
+        print("====================")
+        
+        # --- on vérifie le code retour ---
+        if result.returncode == 0:
+            print(f"✅ Capture PDF réussie : {output_path}")
             return output_path
         else:
-            st.warning(f"Erreur lors de la capture : {result.stdout} {result.stderr}")
+            print(f"❌ Capture PDF échouée : {result.stdout} {result.stderr}")
             return None
+        
     except Exception as e:
         st.warning(f"Impossible de générer le PDF (mais la candidature est enregistrée) : {e}")
+        print(f"❌ Exception lors de la capture : {e}")
         return None
 
 # fonction qui exécute une requete SQL et si c'est un SELECT, retourne le résultat sous forme de liste de dictionnaires
