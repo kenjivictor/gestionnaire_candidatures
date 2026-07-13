@@ -233,19 +233,25 @@ def display_candidature(candidature, delai_archive):
     with st.container(border=True):
         text_icon, text_color = color_result(candidature[['resultat','a_relancer','est_archive']])
         
+        
+        text_etat = f":{text_color}[:{text_color}-background[**" + str(candidature['resultat']) + "**]]"
+        text_jours = ""
+        text_archive = ""
+        
         if candidature['a_relancer'] :
             text_jours = f":{text_color}[:{text_color}-background[**" + str(candidature['jours_attente']) + " jour(s)**]]"
-        elif candidature['est_archive'] :
-            text_jours = f":{text_color}[:{text_color}-background[**Archivé**]]"
-        else:
-            text_jours = ""
+        
+        if candidature['est_archive'] :
+            
+            text_jours = f":grey[:grey-background[**📦 Archivé**]]"
+        
         
         st.markdown(f":{text_color}[:{text_color}-background[**{text_icon} {candidature['societe_nom']} - {candidature['titre_poste']} - {candidature['type_contrat']}**]]")
         st.caption(f"""
                 Candidature envoyée le **{datetime.strftime(candidature['date_candidature'], '%d/%m/%Y')}** en **'{candidature['type_candidature']}'**  
                 Canal d'envoi : {candidature['canal']}
                 """)
-        st.write(f"""**Etat :** {candidature['resultat']} depuis le {datetime.strftime(candidature['date_ref'], '%d/%m/%Y')} {text_jours}""")
+        st.write(f"""**Etat :** {text_etat} depuis le {datetime.strftime(candidature['date_ref'], '%d/%m/%Y')} {text_jours}""")
         if candidature['est_archive'] :
             if st.button("→ Désarchiver", key=f"btn_desarchive_{candidature['id']}"):
                 confirm_archivage_dialog(int(candidature['id']), candidature['societe_nom'], archive=False)
@@ -424,12 +430,12 @@ def confirm_archivage_dialog(id, societe, archive=True):
 
 # fonction qui donne une couleur en fonction du statut de la candidature
 def color_result(val):
-    if val['est_archive'] == 1: return "📦", "grey"
     if val['a_relancer'] == 1: return "⚠️", "yellow"
     if val['resultat'] == 'Entretien': return "☑️", "violet"
     if val['resultat'] == 'Offre': return "✅", "green"
     if val['resultat'] == 'Refus': return "❌", "red"
     if val['resultat'] == 'En attente': return "ℹ️", "blue"
+    if val['est_archive'] == 1: return "📦", "grey"
     return "ℹ️", "blue"
 
 
