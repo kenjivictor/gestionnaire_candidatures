@@ -43,7 +43,7 @@ Ce projet m'a permis de mettre en pratique des compétences clés :
 - **Environnement :** `python-dotenv` (Gestion sécurisée des variables d'environnement) 
 - **API Externes :** [API Recherche d'entreprises](https://recherche-entreprises.api.gouv.fr) (Récupération de métadonnées légales)
 - **Requêtes HTTP :** `Requests` (Gestion des appels API et des codes de statut)
-- **Conteneurisation :** `Docker` (Séparation de Streamlit et Base de données + Fichiers)
+- **Conteneurisation :** `Docker` (Isolation de l'environnement et persistance des données)
 
 # 🐳 Conteneurisation avec Docker
 L’application est entièrement conteneurisée afin de garantir un environnement reproductible, isolé et simple à déployer.
@@ -75,11 +75,13 @@ Ces deux répertoires sont montés dans un volume Docker, ce qui permet :
 
 
 # 🌟 Points Clés du Projet
-- **Intelligence Métier :** Calcul automatique des délais de relance et priorisation des dossiers.
-- **Expérience Utilisateur :** Visualisation des PDF intégrée directement dans l'interface via encodage Base64.
-- **Robustesse :** Gestion dynamique des chemins de fichiers (système agnostique) avec pathlib.
-- **Clean Code :** Fonctions modulaires, commentaires explicites et séparation de la logique DB / UI.
-- **Interopérabilité :** Connexion à des services tiers via API REST pour automatiser l'enrichissement des fiches entreprises.
+- **Conteneurisation Docker :** environnement isolé, reproductible, avec persistance totale des données (base SQLite + PDF)
+- **Vectorisation Pandas :** calculs instantanés pour les statuts et relances.
+- **Expérience Utilisateur :** Visualisation des PDF intégrée dans l'interface sans dépendances externes.
+- **Tableau de bord dynamique :** KPIs mis à jour en temps réel.
+- **Robustesse :** Gestion dynamique des chemins de fichiers.
+- **Interopérabilité API :** sourcing automatisé via l’API Recherche d’entreprises.
+- **Clean Code & maintenabilité :** Fonctions modulaires, commentaires explicites et structure cohérente.
 
 
 # 📁 Structure du projet
@@ -117,18 +119,6 @@ L’application est organisée de manière modulaire afin de séparer clairement
 └── uv.lock                  → Verrouillage des versions (uv)
 ```
 
-
-# 🧠 Difficultés Rencontrées & Solutions
-
-| Difficulté | Solution apportée |
-| :--- | :--- |
-| **Gestion des chemins** entre les dossiers ``tools/`` et ``db/`` | Utilisation de ``Path(__file__).resolve()`` pour garantir un déploiement sans erreur peu importe l'OS |
-| **Affichage des PDF** sans plugin tiers instable | Implémentation d'un **IFrame HTML** avec injection de données en Base64 et paramètres de zoom auto (``#view=FitH``) |
-| **Persistance des données** lors des interactions Streamlit | Optimisation du cache et rechargement forcé du fichier ``.env`` (``override=True``) pour une réactivité immédiate |
-| **Calcul des relances** complexe sur des dates vides | Utilisation de la **vectorisation Pandas** (``np.where`` et ``.fillna``) pour un calcul de statut instantané |
-| **Volume de données limitées** de l'API | Implémentation de filtres côté client (Pandas) et côté serveur (Paramètres de requête API) pour ne récupérer que les entreprises pertinentes en respectant les limites de requêtes imposées par l'API |
-| **Lisibilité des résultats** | Transformation du JSON brut en un DataFrame Pandas propre et trié, affiché dynamiquement dans Streamlit |
-| **Perte de la base SQLite lors des rebuilds Docker** (volume monté au mauvais emplacement, écrasement du fichier lors du build) | Mise en place d’une structure de volumes persistants : création d’un dossier parent ``/data``, montage du volume sur ce répertoire, déplacement de la base dans ``/data/db``, ajout d’un dossier ``/data/pdf`` pour les fichiers générés, et correction des chemins dans l’application pour garantir une persistance totale |
 
 
 # 💻 Installation & lancement
@@ -170,6 +160,21 @@ docker compose down -v
 docker compose up --build
 ```
 ⚠️ Cette commande supprime les volumes → la base et les PDF sont effacés.
+
+
+
+
+# 🧠 Difficultés Rencontrées & Solutions
+
+| Difficulté | Solution apportée |
+| :--- | :--- |
+| **Gestion des chemins** entre les dossiers ``tools/`` et ``db/`` | Utilisation de ``Path(__file__).resolve()`` pour garantir un déploiement sans erreur peu importe l'OS |
+| **Affichage des PDF** sans plugin tiers instable | Implémentation d'un **IFrame HTML** avec injection de données en Base64 et paramètres de zoom auto (``#view=FitH``) |
+| **Persistance des données** lors des interactions Streamlit | Optimisation du cache et rechargement forcé du fichier ``.env`` (``override=True``) pour une réactivité immédiate |
+| **Calcul des relances** complexe sur des dates vides | Utilisation de la **vectorisation Pandas** (``np.where`` et ``.fillna``) pour un calcul de statut instantané |
+| **Volume de données limitées** de l'API | Implémentation de filtres côté client (Pandas) et côté serveur (Paramètres de requête API) pour ne récupérer que les entreprises pertinentes en respectant les limites de requêtes imposées par l'API |
+| **Lisibilité des résultats** | Transformation du JSON brut en un DataFrame Pandas propre et trié, affiché dynamiquement dans Streamlit |
+| **Perte de la base SQLite lors des rebuilds Docker** (volume monté au mauvais emplacement, écrasement du fichier lors du build) | Mise en place d’une structure de volumes persistants : création d’un dossier parent ``/data``, montage du volume sur ce répertoire, déplacement de la base dans ``/data/db``, ajout d’un dossier ``/data/pdf`` pour les fichiers générés, et correction des chemins dans l’application pour garantir une persistance totale |
 
 ---
 
