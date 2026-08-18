@@ -49,7 +49,7 @@ Ce projet m'a permis de mettre en pratique des compétences clés :
 L’application est entièrement conteneurisée afin de garantir un environnement reproductible, isolé et simple à déployer.
 La conteneurisation permet également de séparer le code Streamlit, la base SQLite et les fichiers générés, tout en assurant une persistance totale des données.
 
-🔧 **Architecture du conteneur**
+### 🔧 Architecture du conteneur
 
 ```
 /app/src        → Code Streamlit (monté depuis l’hôte)
@@ -59,7 +59,7 @@ La conteneurisation permet également de séparer le code Streamlit, la base SQL
 
 Le dossier `src/` est monté dans le conteneur, ce qui permet un hot reload : toute modification du code est immédiatement prise en compte sans rebuild.
 
-📦 **Persistance des données**
+### 📦 Persistance des données
 L’application utilise une base SQLite ainsi qu’un dossier dédié aux fichiers générés et importés (PDF).
 Pour garantir que ces données ne soient jamais perdues, même lors d’un rebuild ou d’un redémarrage du conteneur, l’architecture Docker repose sur un volume persistant (`db-data`).
 
@@ -123,7 +123,7 @@ L’application est organisée de manière modulaire afin de séparer clairement
 
 # 💻 Installation & lancement
 
-⚙️ **Configuration initiale**
+### ⚙️ Configuration initiale
 1. Cloner le projet
 
 2. Installer les dépendances : `uv sync`
@@ -135,14 +135,14 @@ L’application est organisée de manière modulaire afin de séparer clairement
 4. Structure de la Base de Données (SQLite)
 Lancer la commande `python src/tools/create_db.py` une seule fois pour créer la base de données
 
-▶️ **Lancement avec Docker**
+### ▶️ Lancement avec Docker
 ```
 docker compose up
 ```
 
 L’application est accessible sur le port défini dans `.env`.
 
-🔄 **Rebuild de l’image**
+### 🔄 Rebuild de l’image
 Uniquement nécessaire si :
 - le Dockerfile change,
 - les dépendances Python évoluent,
@@ -154,7 +154,7 @@ docker compose up --build
 
 Les volumes ne sont pas supprimés : la base SQLite reste intacte.
 
-🧹 **Réinitialisation complète (base + fichiers)**
+### 🧹 Réinitialisation complète (base + fichiers)
 ```
 docker compose down -v
 docker compose up --build
