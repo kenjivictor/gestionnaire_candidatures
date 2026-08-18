@@ -43,7 +43,35 @@ Ce projet m'a permis de mettre en pratique des compétences clés :
 - **Environnement :** `python-dotenv` (Gestion sécurisée des variables d'environnement) 
 - **API Externes :** [API Recherche d'entreprises](https://recherche-entreprises.api.gouv.fr) (Récupération de métadonnées légales)
 - **Requêtes HTTP :** `Requests` (Gestion des appels API et des codes de statut)
+- **Conteneurisation :** `Docker` (Séparation de Streamlit et Base de données + Fichiers)
 
+# 🐳 Conteneurisation avec Docker
+L’application est entièrement conteneurisée afin de garantir un environnement reproductible, isolé et simple à déployer.
+La conteneurisation permet également de séparer le code Streamlit, la base SQLite et les fichiers générés, tout en assurant une persistance totale des données.
+
+## 🔧 Architecture du conteneur
+
+```
+/app/src        → Code Streamlit (monté depuis l’hôte)
+/data/db        → Base SQLite persistante (volume Docker)
+/data/pdf       → Fichiers PDF générés ou importés (volume Docker)
+```
+
+Le dossier `src/` est monté dans le conteneur, ce qui permet un hot reload : toute modification du code est immédiatement prise en compte sans rebuild.
+
+## 📦 Persistance des données
+L’application utilise une base SQLite ainsi qu’un dossier dédié aux fichiers générés et importés (PDF).
+Pour garantir que ces données ne soient jamais perdues, même lors d’un rebuild ou d’un redémarrage du conteneur, l’architecture Docker repose sur un volume persistant (`db-data`).
+
+| Dossier | Rôle |
+| :--- | :--- |
+| `/data/db` | Base SQLite |
+| `/data/pdf` | Fichiers PDF générés et importés |
+
+Ces deux répertoires sont montés dans un volume Docker, ce qui permet :
+- de conserver l’historique complet des candidatures,
+- de préserver les fichiers PDF associés,
+- de redémarrer ou reconstruire le conteneur sans perte de données.
 
 
 # 🌟 Points Clés du Projet
@@ -53,6 +81,41 @@ Ce projet m'a permis de mettre en pratique des compétences clés :
 - **Clean Code :** Fonctions modulaires, commentaires explicites et séparation de la logique DB / UI.
 - **Interopérabilité :** Connexion à des services tiers via API REST pour automatiser l'enrichissement des fiches entreprises.
 
+
+# 📁 Structure du projet
+
+L’application est organisée de manière modulaire afin de séparer clairement la logique métier, l’interface utilisateur, la gestion des données et les outils techniques. Cette structure facilite la maintenance, l’évolution du projet et son déploiement via Docker.
+
+```
+├── src/                            → Code source de l’application Streamlit
+│   ├── main.py                     → Point d’entrée de l’application
+│   ├── app_pages/                  → Pages Streamlit (navigation multi-pages)
+│   │   ├── list.py                 → KPIs & Candidatures en cours
+│   │   ├── add.py                  → Ajout d'une candidature
+│   │   ├── archive.py              → Les candidatures archivées
+│   │   ├── search_entreprises.py   → Module de prospection via API
+│   │   └── update_delete.py        → Modifier/Supprimer une candidature
+│   │
+│   ├── data/                → Fichiers CSV pour le remplissage automatique des formulaires
+│   │
+│   ├── static/              → Polices de thème Streamlit
+│   │
+│   ├── tools/               → Scripts utilitaires
+│   │   ├── create_db.py     → Initialisation de la base SQLite
+│   │   ├── shot.py          → Génération des PDF à partir d'une URL
+│   │   └── utils.py         → Fonctions techniques
+│
+├── .streamlit/              → Configuration Streamlit (thème, secrets…)
+│
+├── docker-compose.yml       → Définition des services & volumes Docker
+├── Dockerfile               → Construction de l’image de l’application
+│
+├── .env                     → Variables d’environnement
+├── .env-dist                → Modèle de configuration
+│
+├── pyproject.toml           → Dépendances & configuration du projet
+└── uv.lock                  → Verrouillage des versions (uv)
+```
 
 
 # 🧠 Difficultés Rencontrées & Solutions
@@ -65,23 +128,48 @@ Ce projet m'a permis de mettre en pratique des compétences clés :
 | **Calcul des relances** complexe sur des dates vides | Utilisation de la **vectorisation Pandas** (``np.where`` et ``.fillna``) pour un calcul de statut instantané |
 | **Volume de données limitées** de l'API | Implémentation de filtres côté client (Pandas) et côté serveur (Paramètres de requête API) pour ne récupérer que les entreprises pertinentes en respectant les limites de requêtes imposées par l'API |
 | **Lisibilité des résultats** | Transformation du JSON brut en un DataFrame Pandas propre et trié, affiché dynamiquement dans Streamlit |
+| **Perte de la base SQLite lors des rebuilds Docker** (volume monté au mauvais emplacement, écrasement du fichier lors du build) | Mise en place d’une structure de volumes persistants : création d’un dossier parent ``/data``, montage du volume sur ce répertoire, déplacement de la base dans ``/data/db``, ajout d’un dossier ``/data/pdf`` pour les fichiers générés, et correction des chemins dans l’application pour garantir une persistance totale |
 
 
 # 💻 Installation & lancement
 
+## ⚙️ Configuration initiale
 1. Cloner le projet
 
 2. Installer les dépendances : `uv sync`
 
-3. Configuration
+3. Variables d'environnement
     1. Copier le fichier `.env-dist` vers `.env`
     2. Mettre à jour les variables d'environnement dans le nouveau fichier
 
 4. Structure de la Base de Données (SQLite)
-Lancer la commande `python tools/create_db.py` une seule fois pour créer la base de données
+Lancer la commande `python src/tools/create_db.py` une seule fois pour créer la base de données
 
-5. L'application Streamlit 
-Lancer la commande `streamlit run app.py`
+## ▶️ Lancement avec Docker
+```
+docker compose up
+```
+
+L’application est accessible sur le port défini dans `.env`.
+
+## 🔄 Rebuild de l’image
+Uniquement nécessaire si :
+- le Dockerfile change,
+- les dépendances Python évoluent,
+- la structure du projet est modifiée.
+
+```
+docker compose up --build
+```
+
+Les volumes ne sont pas supprimés : la base SQLite reste intacte.
+
+## 🧹 Réinitialisation complète (base + fichiers)
+```
+docker compose down -v
+docker compose up --build
+```
+⚠️ Cette commande supprime les volumes → la base et les PDF sont effacés.
 
 ---
 
