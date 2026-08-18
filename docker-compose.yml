@@ -1,0 +1,23 @@
+name: candidatures
+
+services:
+  
+  # streamlit
+  candidatures_dashboard:
+    container_name: candidatures_dashboard
+    build: .
+    env_file: .env
+    command: ["streamlit", "run", "src/main.py", "--server.runOnSave=true"]
+    volumes:
+      - ./src:/app/src
+      - ./.streamlit:/app/.streamlit
+      - db-data:/data
+    ports:
+      - "${DASHBOARD_PORT}:8501"
+
+  
+volumes:
+  db-data:
+    name: "${DB_DATA}"
+    driver: local
+

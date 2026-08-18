@@ -24,22 +24,24 @@ DB_FILE_NAME = os.getenv("DB_FILE_NAME", "default.db")
 
 def get_codes_naf():
     all_results = {}
+    db_file = ROOT_DIR / 'data/naf_clean_niv2.csv'
 
     try:
-        df = pd.read_csv('data/naf_clean_niv2.csv', sep=';')
+        df = pd.read_csv(db_file, sep=';')
         df['NAFs'] = df['NAFs'].apply(lambda x: eval(x))
         # Libellé devient l'index, on sélectionne les codes, puis conversion en dictionnaire
         all_results = df.set_index('Libellé')['NAFs'].to_dict()
     except:
-        print('Erreur de récupération des Codes NAF')
+        print(f'Erreur de récupération des Codes NAF ({db_file})')
 
     return all_results
 
 def get_tranches_effectif():
     all_results = {}
+    db_file = ROOT_DIR / 'data/effectifs.csv'
 
     try:
-        df = pd.read_csv('data/effectifs.csv', sep=';')
+        df = pd.read_csv(db_file, sep=';')
         df['Codes'] = df['Codes'].apply(lambda x: eval(x))
         # Libellé devient l'index, on sélectionne les codes, puis conversion en dictionnaire
         all_results = df.set_index('Libellé')['Codes'].to_dict()
@@ -52,9 +54,10 @@ def get_tranches_effectif():
 
 def get_departements():
     all_results = {}
+    db_file = ROOT_DIR / 'data/codes_departement.csv'
 
     try:
-        df = pd.read_csv('data/codes_departement.csv', sep=';')
+        df = pd.read_csv(db_file, sep=';')
         # Libellé devient l'index, on sélectionne les codes, puis conversion en dictionnaire
         all_results = df.set_index('Nom_Departement')['Code_Departement'].to_dict()
     except:
@@ -64,9 +67,10 @@ def get_departements():
 
 def get_codes_postaux():
     all_results = {}
+    db_file = ROOT_DIR / 'data/codes_postaux.csv'
 
     try:
-        df = pd.read_csv('data/codes_postaux.csv', sep=';', dtype='str')
+        df = pd.read_csv(db_file, sep=';', dtype='str')
         # Libellé devient l'index, on sélectionne les codes, puis conversion en dictionnaire
         all_results = df.set_index('Commune')['Code_postal'].to_dict()
     except:
@@ -77,9 +81,10 @@ def get_codes_postaux():
 
 def get_formes_juridique():
     all_results = {}
+    db_file = ROOT_DIR / 'data/formes_juridiques.csv'
 
     try:
-        df = pd.read_csv('data/formes_juridiques.csv', sep=';')
+        df = pd.read_csv(db_file, sep=';')
         # Libellé devient l'index, on sélectionne les codes, puis conversion en dictionnaire
         all_results = df.set_index('Code')['Libellé'].to_dict()
     except:
@@ -273,11 +278,17 @@ def display_candidature(candidature, delai_archive):
                         """)
             with cols_detail[1]:
                 st.markdown(f"**Lien original :** [Suivre le lien]({candidature['lien_offre']})")
-                pdf_path = candidature['pdf_path']
-                    # On vérifie que le fichier existe avant d'essayer de l'afficher
+                if candidature['pdf_path'] is not None:
+                    pdf_path = '/data/' + str(candidature['pdf_path']).replace('\\', '/')
+                else:
+                    pdf_path = None
+                # On vérifie que le fichier existe avant d'essayer de l'afficher
                 if pdf_path and os.path.exists(pdf_path):
                     if st.button("Voir le PDF", key=f"btn_pdf_{candidature['id']}"):
                         display_pdf(pdf_path)
+                else:
+                    if pdf_path is not None:
+                        print(f"Impossible d'afficher le fichier PDF ('{pdf_path}')")
 
 # fonction qui sauvegarde une page web
 def save_pdf_from_url(url, filename, pdf_folder_path):
@@ -285,7 +296,8 @@ def save_pdf_from_url(url, filename, pdf_folder_path):
     if not url: return None
     
     
-    output_path = os.path.abspath(os.path.join(pdf_folder_path, f"{filename}.pdf"))
+    # output_path = os.path.abspath(os.path.join(pdf_folder_path, f"{filename}.pdf"))
+    output_path = os.path.join(pdf_folder_path, f"{filename}.pdf")
 
     try:
         # On appelle shot.py avec l'URL et le chemin de sortie
@@ -319,7 +331,7 @@ def save_pdf_from_url(url, filename, pdf_folder_path):
 def run_query(query, params=(), fetch=False):
     import numpy as np
     # chemin absolu du fichier de base de données
-    db_path = ROOT_DIR / "db" / DB_FILE_NAME
+    db_path = f"/data/db/{DB_FILE_NAME}"
     
     # fonction interne qui convertit les types Pandas/NumPy/Python en types compatibles SQLite
     def normalize_param(p):

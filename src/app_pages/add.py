@@ -7,7 +7,7 @@ from pathlib import Path
 
 # chemin absolu du dossier racine
 ROOT_DIR = Path(__file__).resolve().parent.parent
-PDF_FOLDER_PATH = ROOT_DIR / "offres_pdf"
+PDF_FOLDER_PATH = "offres_pdf"
 
 
 st.subheader("➕ Nouvelle Candidature")
@@ -53,5 +53,5 @@ if submit:
         st.session_state.message_icon = "✅"
         st.rerun()
     else:
-        st.session_state.message = "Une erreur s'est produite" + pdf_message
+        st.session_state.message = "Une erreur s'est produite " + pdf_message
         st.session_state.message_icon = "❌"
