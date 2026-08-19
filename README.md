@@ -102,10 +102,10 @@ L’application est organisée de manière modulaire afin de séparer clairement
 │   │
 │   ├── static/              → Polices de thème Streamlit
 │   │
-│   ├── tools/               → Scripts utilitaires
-│   │   ├── create_db.py     → Initialisation de la base SQLite
-│   │   ├── shot.py          → Génération des PDF à partir d'une URL
-│   │   └── utils.py         → Fonctions techniques
+│   └── tools/               → Scripts utilitaires
+│       ├── create_db.py     → Initialisation de la base SQLite
+│       ├── shot.py          → Génération des PDF à partir d'une URL
+│       └── utils.py         → Fonctions techniques
 │
 ├── .streamlit/              → Configuration Streamlit (thème, secrets…)
 │
@@ -126,14 +126,13 @@ L’application est organisée de manière modulaire afin de séparer clairement
 ### ⚙️ Configuration initiale
 1. Cloner le projet
 
-2. Installer les dépendances : `uv sync`
-
-3. Variables d'environnement
-    1. Copier le fichier `.env-dist` vers `.env`
+2. Variables d'environnement
+    1. Créer le fichier `.env`
+    ```
+    cp .env-dist .env
+    ```
     2. Mettre à jour les variables d'environnement dans le nouveau fichier
 
-4. Structure de la Base de Données (SQLite)
-Lancer la commande `python src/tools/create_db.py` une seule fois pour créer la base de données
 
 ### ▶️ Lancement avec Docker
 ```
