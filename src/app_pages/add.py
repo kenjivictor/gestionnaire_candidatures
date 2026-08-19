@@ -4,10 +4,7 @@ import uuid
 import tools.utils as tools
 from pathlib import Path
 
-
-# chemin absolu du dossier racine
-ROOT_DIR = Path(__file__).resolve().parent.parent
-PDF_FOLDER_PATH = "offres_pdf"
+PDF_FOLDER_PATH = ""
 
 
 st.subheader("➕ Nouvelle Candidature")

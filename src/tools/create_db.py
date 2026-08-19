@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 
 # chemin absolu du dossier racine
-ROOT_DIR = Path(__file__).resolve().parent.parent
+ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 
 # Charger les variables d'environnement du fichier .env
 env_path = ROOT_DIR / ".env"
@@ -12,7 +12,7 @@ load_dotenv(dotenv_path=env_path)
 DB_FILE_NAME = os.getenv("DB_FILE_NAME", "default.db")
 
 # chemin absolu du fichier de base de données
-DB_PATH = ROOT_DIR / "db" / DB_FILE_NAME
+DB_PATH = f"/data/db/{DB_FILE_NAME}"
 
 
 def init_db():
